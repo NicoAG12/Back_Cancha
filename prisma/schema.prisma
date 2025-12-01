@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Estado {
+  ACTIVO
+  INACTIVO
+}
+
+enum Rol {
+  ADMIN
+  USER
+}
+
+enum Tipo_Movimiento {
+  INGRESO
+  EGRESO
+}
+
+enum Tipo_Pago_Turno {
+  SENIA
+  COMPLETO
+}
+
+enum estados_turno {
+  RESERVADO
+  CANCELADO
+  FINALIZADO
+}
+
+model Usuarios {
+  id                String             @id @default(cuid())
+  nombre_usuario    String             @unique
+  password          String
+  rol               Rol
+  estado            Estado             @default(ACTIVO)
+  cajas_abiertas    Caja[]             @relation("usuario_apertura")
+  cajas_cerradas    Caja[]             @relation("usuario_cierre")
+  movimientos_caja  Movimientos_Caja[]
+  ventas_realizadas Ventas[]
+  turnos_dados      Turno[]
+}
+
+model Productos {
+  id             Int             @id @default(autoincrement())
+  nombre         String
+  precio         Float
+  stock          Int
+  estado         Estado          @default(ACTIVO)
+  detalles_venta Detalle_Venta[]
+}
+
+model Cancha {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  precio_hora Float
+  estado      Estado  @default(ACTIVO)
+  turnos      Turno[]
+}
+
+model Turno {
+  id               String        @id @default(cuid())
+  nombre_cliente   String
+  fecha_hora       DateTime
+  minutos_duracion Float         @default(60)
+  Cancha_id        Cancha        @relation(fields: [canchaId], references: [id])
+  canchaId         Int
+  estado_turno     estados_turno @default(RESERVADO)
+  turnos_pagos     Turno_Pagos[]
+  usuario_alta     Usuarios      @relation(fields: [usuarioAltaId], references: [id])
+  usuarioAltaId    String
+  precio_turno     Float @default(0)
+}
+
+model Caja {
+  id                String             @id @default(cuid())
+  saldo_inicial     Float              @default(0)
+  fecha_apertura    DateTime           @default(now())
+  fecha_cierre      DateTime?
+  usuario_apertura  Usuarios           @relation("usuario_apertura", fields: [usuarioAperturaId], references: [id])
+  usuarioAperturaId String
+  usuario_cierre    Usuarios?          @relation("usuario_cierre", fields: [usuarioCierreId], references: [id])
+  usuarioCierreId   String?
+  movimientos_caja  Movimientos_Caja[]
+  Total             Float              @default(0)
+  estado            Estado             @default(ACTIVO)
+}
+
+model Movimientos_Caja {
+  id              String          @id @default(cuid())
+  tipo_movimiento Tipo_Movimiento
+  monto           Float
+  fecha           DateTime        @default(now())
+  id_caja         Caja            @relation(fields: [cajaId], references: [id])
+  cajaId          String
+  descripcion     String?
+  usuario_alta    Usuarios        @relation(fields: [usuarioAltaId], references: [id])
+  usuarioAltaId   String
+  turnos_pagos    Turno_Pagos[]
+  gastos_pagos    Gastos_pagos[]
+  ventas          Ventas[]
+}
+
+model Turno_Pagos {
+  id            String           @id @default(cuid())
+  id_turno      Turno            @relation(fields: [turnoId], references: [id])
+  turnoId       String
+  movimiento_id Movimientos_Caja @relation(fields: [movimientoId], references: [id])
+  movimientoId  String
+  monto_pagado  Float
+  fecha_pago    DateTime         @default(now())
+  tipo_pago     Tipo_Pago_Turno
+  Observaciones String?
+}
+
+model Categorias_Gastos {
+  id           Int            @id @default(autoincrement())
+  nombre_gasto String
+  gastos_pagos Gastos_pagos[]
+}
+
+model Gastos_pagos {
+  id            String            @id @default(cuid())
+  id_categoria  Categorias_Gastos @relation(fields: [categoriaId], references: [id])
+  categoriaId   Int
+  movimiento_id Movimientos_Caja  @relation(fields: [movimientoId], references: [id])
+  monto_pagado  Float 
+  movimientoId  String
+  descripcion   String?
+}
+
+model Ventas {
+  id             String           @id @default(cuid())
+  movimiento_id  Movimientos_Caja @relation(fields: [movimientoId], references: [id])
+  movimientoId   String
+  fecha          DateTime         @default(now())
+  Total          Float
+  user_alta      Usuarios         @relation(fields: [usuarioAltaId], references: [id])
+  usuarioAltaId  String
+  detalles_venta Detalle_Venta[]
+}
+
+model Detalle_Venta {
+  id              String    @id @default(cuid())
+  id_venta        Ventas    @relation(fields: [ventaId], references: [id])
+  ventaId         String
+  id_producto     Productos @relation(fields: [productoId], references: [id])
+  productoId      Int
+  cantidad        Int
+  precio_unitario Float
+  subtotal        Float
+}

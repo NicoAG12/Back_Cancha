@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Turno" ADD COLUMN     "precio_turno" DOUBLE PRECISION NOT NULL DEFAULT 0;
